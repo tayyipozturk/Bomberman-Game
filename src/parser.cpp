@@ -23,6 +23,7 @@ Parser::Parser() {
             std::cin >> argument;
             arguments.push_back(argument);
         }
+        bombers.push_back(Bomber(x, y, argumentCount, executablePath, arguments));
     }
 
     this->map = Map(mapWidth, mapHeight);

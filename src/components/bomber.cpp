@@ -29,5 +29,8 @@ std::vector<std::string> Bomber::getArguments() {
 }
 
 void Bomber::Print() {
-    std::cout << "Bomber at (" << this->x << ", " << this->y << ") with " << this->argumentCount << " arguments and the executable path of" << executablePath << std::endl;
+    std::cout << "Bomber at (" << this->x << ", " << this->y << ") with " << this->argumentCount << " arguments and the executable path of " << executablePath << std::endl;
+    for (int i = 0; i < this->argumentCount-1; i++) {
+        std::cout << "Argument " << i+1 << ": " << this->arguments[i] << std::endl;
+    }
 }

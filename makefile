@@ -1,16 +1,2 @@
-CXX= g++
-CXXFLAGS = -std=c++17 -Wall
-SOURCES = $(wildcard src/*.cpp) $(wildcard src/*/*.cpp)
-OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=bgame
-
-all: $(SOURCES) $(EXECUTABLE)
-
-$(EXECUTABLE): $(OBJECTS)
-	$(CXX) $(OBJECTS) -o $@
-
-.cpp.o:
-	$(CXX) $(CXXFLAGS) $< -o $@
-
-clean:
-	rm -rf $(OBJECTS) $(EXECUTABLE)
+all:
+	g++ -o bgame src/*.cpp src/components/*.cpp -O3 -std=c++17

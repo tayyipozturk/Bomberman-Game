@@ -5,6 +5,7 @@
 #include "components/bomber.h"
 #include "components/map.h"
 #include "components/obstacle.h"
+#include <iostream>
 
 class Parser {
 public:

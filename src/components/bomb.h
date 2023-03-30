@@ -4,8 +4,6 @@
 
 class Bomb {
 public:
-    Bomb();
-    ~Bomb();
 private:
     int x;
     int y;
