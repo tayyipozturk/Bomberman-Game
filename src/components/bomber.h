@@ -7,19 +7,17 @@
 
 class Bomber {
 public:
-    Bomber(int x, int y, int argumentCount, std::string executablePath, std::vector<std::string> arguments);
+    Bomber(int x, int y, int argumentCount, char** arguments);
     int getX();
     int getY();
     int getArgumentCount();
-    std::string getExecutablePath();
-    std::vector<std::string> getArguments();
+    char** getArgs();
     void Print();
 private:
     int x;
     int y;
     int argumentCount;
-    std::string executablePath;
-    std::vector<std::string> arguments;
+    char** args;
 };
 
 

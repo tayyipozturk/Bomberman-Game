@@ -15,15 +15,15 @@ Parser::Parser() {
     for (int i = 0; i < bomberCount; i++) {
         int x, y, argumentCount;
         std::cin >> x >> y >> argumentCount;
-        std::string executablePath;
-        std::vector<std::string> arguments;
-        std::cin >> executablePath;
-        for (int j = 0; j < argumentCount-1; j++) {
+        char** args = (char**) malloc(sizeof(char*) * (argumentCount+1));
+        for (int j = 0; j < argumentCount; j++) {
             std::string argument;
             std::cin >> argument;
-            arguments.push_back(argument);
+            args[j] = new char[argument.length()+1];
+            strcpy(args[j], argument.c_str());
         }
-        bombers.push_back(Bomber(x, y, argumentCount, executablePath, arguments));
+        args[argumentCount+1] = NULL;
+        bombers.push_back(Bomber(x, y, argumentCount, args));
     }
 
     this->map = Map(mapWidth, mapHeight);
@@ -52,7 +52,7 @@ void Parser::Print() {
     for (auto obstacle : obstacles) {
         obstacle.Print();
     }
-    for (auto bomber : bombers) {
-        bomber.Print();
-    }
+//    for (auto bomber : bombers) {
+//        bomber.Print();
+//    }
 }

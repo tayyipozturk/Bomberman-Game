@@ -6,6 +6,7 @@
 #include "components/map.h"
 #include "components/obstacle.h"
 #include <iostream>
+#include <cstring>
 
 class Parser {
 public:
