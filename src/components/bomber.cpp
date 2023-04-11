@@ -5,6 +5,7 @@ Bomber::Bomber(int x, int y, int argumentCount, char** arguments) {
     this->y = y;
     this->argumentCount = argumentCount;
     this->args = arguments;
+//    this->isAlive = true;
 }
 
 int Bomber::getX() {
@@ -22,3 +23,11 @@ int Bomber::getArgumentCount() {
 char** Bomber::getArgs() {
     return this->args;
 }
+
+//bool Bomber::setIsAlive(bool isAlive) {
+//    this->isAlive = isAlive;
+//}
+//
+//bool Bomber::getIsAlive() {
+//    return this->isAlive;
+//}
