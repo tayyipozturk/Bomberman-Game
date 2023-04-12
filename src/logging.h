@@ -1,6 +1,3 @@
-#ifdef __cplusplus
-extern "C" {
-#endif
 #ifndef HW1_LOGGING_H
 #define HW1_LOGGING_H
 
@@ -24,6 +21,3 @@ typedef struct obstacle_data {
 
 void print_output(imp *in, omp *out, obsd *obstacle, od* objects);
 #endif //HW1_LOGGING_H
-#ifdef __cplusplus
-}
-#endif
