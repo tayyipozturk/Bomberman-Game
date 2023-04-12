@@ -1,3 +1,6 @@
+#ifndef CONTROLLER_H
+#define CONTROLLER_H
+
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <iostream>
@@ -13,3 +16,5 @@ extern "C" {
 #include <poll.h>
 
 #define PIPE(fd) socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, fd)
+
+#endif //CONTROLLER_H

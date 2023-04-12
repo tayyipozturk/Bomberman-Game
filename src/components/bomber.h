@@ -5,6 +5,15 @@
 #include <vector>
 #include <iostream>
 
+extern "C" {
+    #include <unistd.h>
+}
+extern "C" {
+    #include "../logging.h"
+}
+
+#include "map.h"
+
 class Bomber {
 public:
     Bomber(int x, int y, int argumentCount, char** arguments);
@@ -16,6 +25,9 @@ public:
     bool getIsAlive();
     void Print();
     static int aliveCount;
+
+    void Start(int socket);
+    void Vision(int socket, Map map);
 private:
     int x;
     int y;

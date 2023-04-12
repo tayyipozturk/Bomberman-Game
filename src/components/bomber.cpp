@@ -39,3 +39,18 @@ bool Bomber::getIsAlive() {
 }
 
 int Bomber::aliveCount = 0;
+
+void Bomber::Start(int socket) {
+    om out_message;
+    out_message.type = BOMBER_LOCATION;
+    out_message.data.new_position.x = this->getX();
+    out_message.data.new_position.y = this->getY();
+    send_message(socket, &out_message);
+}
+
+void Bomber::Vision(int socket, Map map) {
+    om out_message;
+    out_message.type = BOMBER_VISION;
+    out_message.data.object_count = map.getVision(this->getX(), this->getY());
+    send_message(socket, &out_message);
+}

@@ -47,6 +47,21 @@ int main() {
                             incoming_message_print.pid = pid;
                             incoming_message_print.m = &incoming_message;
                             print_output(&incoming_message_print, NULL, NULL, NULL);
+                            if (incoming_message.type == BOMBER_MOVE) {
+                                //bomber.move(incoming_message.data.target_position);
+                            }
+                            else if (incoming_message.type == BOMBER_SEE) {
+                                bomber.Vision(fd[j][1], map);
+                            }
+                            else if (incoming_message.type == BOMBER_START) {
+                                bomber.Start(fd[j][1]);
+                            }
+                            else if (incoming_message.type == BOMBER_PLANT) {
+                                //bomber.plant(incoming_message.data.bomb_info.interval, incoming_message.data.bomb_info.radius);
+                            }
+                            else if (incoming_message.type == BOMB_EXPLODE) {
+                                //bomber.explode();
+                            }
                         }
                     }
                 }
