@@ -17,4 +17,9 @@ extern "C" {
 
 #define PIPE(fd) socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, fd)
 
+void pipe_bombers(int n, int fd[][2]);
+void fork_bombers(std::vector<Bomber> bombers, int fd[][2]);
+void poll(std::vector<Bomber> bombers, std::vector<Obstacle> obstacles, Map map, int fd[][2]);
+
+
 #endif //CONTROLLER_H
