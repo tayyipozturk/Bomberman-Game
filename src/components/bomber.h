@@ -12,16 +12,16 @@ public:
     int getY();
     int getArgumentCount();
     char** getArgs();
-    //bool setIsAlive(bool isAlive);
-    //bool getIsAlive();
+    void setIsAlive(bool isAlive);
+    bool getIsAlive();
     void Print();
+    static int aliveCount;
 private:
     int x;
     int y;
     int argumentCount;
     char** args;
-    //bool isAlive;
-    //static aliveCount;
+    bool isAlive;
 };
 
 

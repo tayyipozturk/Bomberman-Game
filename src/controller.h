@@ -10,5 +10,6 @@ extern "C" {
 }
 #include <vector>
 #include <string>
+#include <poll.h>
 
 #define PIPE(fd) socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, fd)

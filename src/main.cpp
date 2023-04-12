@@ -16,7 +16,7 @@ int main() {
         pid_t pid = fork();
         if (pid == 0) {
             dup2(fd[i][0], STDIN_FILENO);
-            dup2(fd[i][1], STDOUT_FILENO);
+            dup2(fd[i][0], STDOUT_FILENO);
             close(fd[i][0]);
             for(int j =0; bomber.getArgs()[j] != NULL; j++) {
                 std::cout<<bomber.getArgs()[j]<<std::endl;
@@ -25,36 +25,31 @@ int main() {
 
         }
         else {      //Controller
-            close(fd[i][1]);
-            close(fd[i][1]);
+            close(fd[i][0]);
+            dup2(fd[i][1], STDIN_FILENO);
             // print messages coming to the pipe
             im incoming_message;
-            while(1) {
-                //polling poll kullan
-                // if(poll>1){
-                //     //read
-                //}
-                //else{
-                //    no message
-                //}
-                //for(int i = 0; i < bombers.size(); i++){
-                //    int poll(fd[i][1])
-                //}
-
-
-                read(fd[i][0], &incoming_message, sizeof(incoming_message));
-                std::cout<<incoming_message.type<<std::endl;
-                //std::cout<<incoming_message.data<<std::endl;
-            //if(type == bomb.plant){
-            //    fork()
-             //   if(pid == 0){
-                    //bomb
-                    //explode
-            //    }
-            //    else{
-                    //controller
-                    //send bomb explode
-            //    }
+            //create pollfd arrays for each pipe
+            struct pollfd pfd[bombers.size()];
+            for(int j = 0; j < bombers.size(); j++){
+                pfd[j].fd = fd[j][1];
+                pfd[j].events = POLLIN;
+                pfd[j].revents = 0;
+            }
+            int timeout = 1000;  // timeout in milliseconds
+            while(Bomber::aliveCount > 1){
+                int num_events = poll(pfd, bombers.size(), timeout);
+                if(num_events > 0){
+                    for(int j = 0; j < bombers.size(); j++){
+                        if(pfd[j].revents & POLLIN){
+                            read_data(fd[j][1], &incoming_message);
+                            imp incoming_message_print;
+                            incoming_message_print.pid = pid;
+                            incoming_message_print.m = &incoming_message;
+                            print_output(&incoming_message_print, NULL, NULL, NULL);
+                        }
+                    }
+                }
             }
         }
     }

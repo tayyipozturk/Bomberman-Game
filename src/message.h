@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef HW1_MESSAGE_H
 #define HW1_MESSAGE_H
 
@@ -76,3 +79,6 @@ int send_object_data(int socket, int count, od* objects);
 int read_data(int socket, im* message);
 
 #endif //HW1_MESSAGE_H
+#ifdef __cplusplus
+    }
+#endif

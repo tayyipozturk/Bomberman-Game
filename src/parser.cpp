@@ -3,6 +3,7 @@
 Parser::Parser() {
     int mapWidth, mapHeight, obstacleCount, bomberCount;
     std::cin >> mapWidth >> mapHeight >> obstacleCount >> bomberCount;
+    this->map = Map(mapWidth, mapHeight);
 
     std::vector<Obstacle> obstacles;
     for (int i = 0; i < obstacleCount; i++) {
@@ -10,6 +11,7 @@ Parser::Parser() {
         std::cin >> x >> y >> durability;
         obstacles.push_back(Obstacle(x, y, durability));
     }
+    this->obstacles = obstacles;
 
     std::vector<Bomber> bombers;
     for (int i = 0; i < bomberCount; i++) {
@@ -25,9 +27,6 @@ Parser::Parser() {
         args[argumentCount+1] = NULL;
         bombers.push_back(Bomber(x, y, argumentCount, args));
     }
-
-    this->map = Map(mapWidth, mapHeight);
-    this->obstacles = obstacles;
     this->bombers = bombers;
 }
 
