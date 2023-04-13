@@ -40,17 +40,68 @@ bool Bomber::getIsAlive() {
 
 int Bomber::aliveCount = 0;
 
-void Bomber::Start(int socket) {
-    om out_message;
-    out_message.type = BOMBER_LOCATION;
-    out_message.data.new_position.x = this->getX();
-    out_message.data.new_position.y = this->getY();
-    send_message(socket, &out_message);
+void Bomber::Start(int socket, Map& map, omp* omp) {
+    map.setBomber(this->getX(), this->getY());
+    omp->m->type = BOMBER_LOCATION;
+    omp->m->data.new_position.x = this->getX();
+    omp->m->data.new_position.y = this->getY();
+    send_message(socket, omp->m);
+    print_output(NULL, omp, NULL, NULL);
 }
 
-void Bomber::Vision(int socket, Map map) {
-    om out_message;
-    out_message.type = BOMBER_VISION;
-    out_message.data.object_count = map.getVision(this->getX(), this->getY());
-    send_message(socket, &out_message);
+void Bomber::Vision(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs) {
+    std::vector<od> vision = getVision(bombers, obstacles, bombs);
+    od* objects = (od*) malloc(sizeof(od) * vision.size());
+    for (int i=0 ; i < vision.size() ; i++) {
+        objects[i] = vision[i];
+    }
+
+    omp->m->type = BOMBER_VISION;
+    omp->m->data.object_count = vision.size();
+    send_message(socket, omp->m);
+    send_object_data(socket, vision.size(), objects);
+    print_output(NULL, omp, NULL, objects);
+}
+
+std::vector<od> Bomber::getVision(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs) {
+    std::vector<od> vision;
+    int min_x = x - 3;
+    int max_x = x + 3;
+    int min_y = y - 3;
+    int max_y = y + 3;
+
+    for (int i=0 ; i < bombers.size() ; i++) {
+        if (bombers[i].getX() >= min_x && bombers[i].getX() <= max_x && bombers[i].getY() == this->getY() && bombers[i].getX() != this->getX()) {
+            od object;
+            object.type = BOMBER;
+            object.position.x = bombers[i].getX();
+            object.position.y = bombers[i].getY();
+            vision.push_back(object);
+        }
+        else if (bombers[i].getY() >= min_y && bombers[i].getY() <= max_y && bombers[i].getX() == this->getX() && bombers[i].getY() != this->getY()) {
+            od object;
+            object.type = BOMBER;
+            object.position.x = bombers[i].getX();
+            object.position.y = bombers[i].getY();
+            vision.push_back(object);
+        }
+    }
+
+    for (int i=0 ; i < obstacles.size() ; i++) {
+        if (obstacles[i].getX() >= min_x && obstacles[i].getX() <= max_x && obstacles[i].getY() == this->getY()) {
+            od object;
+            object.type = OBSTACLE;
+            object.position.x = obstacles[i].getX();
+            object.position.y = obstacles[i].getY();
+            vision.push_back(object);
+        }
+        else if (obstacles[i].getY() >= min_y && obstacles[i].getY() <= max_y && obstacles[i].getX() == this->getX()) {
+            od object;
+            object.type = OBSTACLE;
+            object.position.x = obstacles[i].getX();
+            object.position.y = obstacles[i].getY();
+            vision.push_back(object);
+        }
+    }
+    return vision;
 }

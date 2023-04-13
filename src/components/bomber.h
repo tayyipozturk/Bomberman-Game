@@ -13,6 +13,8 @@ extern "C" {
 }
 
 #include "map.h"
+#include "obstacle.h"
+#include "bomb.h"
 
 class Bomber {
 public:
@@ -26,8 +28,9 @@ public:
     void Print();
     static int aliveCount;
 
-    void Start(int socket);
-    void Vision(int socket, Map map);
+    void Start(int socket, Map& map, omp* omp);
+    void Vision(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs);
+    std::vector<od> getVision(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs);
 private:
     int x;
     int y;

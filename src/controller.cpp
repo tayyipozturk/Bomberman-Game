@@ -6,10 +6,11 @@ void pipe_bombers(int size, int fd[][2]) {
     }
 }
 
-void fork_bombers(std::vector<Bomber> bombers, int fd[][2]) {
+void fork_bombers(std::vector<Bomber>& bombers, int fd[][2], std::vector<pid_t>& pids) {
     for (int i = 0; i < bombers.size(); i++) {
         Bomber bomber = bombers[i];
         pid_t pid = fork();
+        pids.push_back(pid);
         if (pid == 0) {
             dup2(fd[i][0], STDIN_FILENO);
             dup2(fd[i][0], STDOUT_FILENO);
@@ -23,8 +24,12 @@ void fork_bombers(std::vector<Bomber> bombers, int fd[][2]) {
     }
 }
 
-void poll(std::vector<Bomber> bombers, std::vector<Obstacle> obstacles, Map map, int fd[][2]) {
-    im incoming_message;
+void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs, Map& map, int fd[][2], std::vector<pid_t>& pids) {
+    imp imp;
+    im im;
+    omp omp;
+    om om;
+    omp.m = &om;
     //create pfd arrays for each pipe
     struct pollfd pfd[bombers.size()];
     for (int j = 0; j < bombers.size(); j++) {
@@ -38,24 +43,32 @@ void poll(std::vector<Bomber> bombers, std::vector<Obstacle> obstacles, Map map,
         if (num_events > 0) {
             for (int j = 0; j < bombers.size(); j++) {
                 if (pfd[j].revents & POLLIN) {
-                    read_data(fd[j][1], &incoming_message);
-                    imp incoming_message_print;
-                    incoming_message_print.pid = getpid();
-                    incoming_message_print.m = &incoming_message;
-                    print_output(&incoming_message_print, NULL, NULL, NULL);
-                    if (incoming_message.type == BOMBER_MOVE) {
+                    read_data(fd[j][1], &im);
+                    imp.pid = pids[j];
+                    imp.m = &im;
+                    print_output(&imp, NULL, NULL, NULL);
+                    if (im.type == BOMBER_MOVE) {
                         //bomber.move(incoming_message.data.target_position);
-                    } else if (incoming_message.type == BOMBER_SEE) {
-                        bombers[j].Vision(fd[j][1], map);
-                    } else if (incoming_message.type == BOMBER_START) {
-                        bombers[j].Start(fd[j][1]);
-                    } else if (incoming_message.type == BOMBER_PLANT) {
+                    } else if (im.type == BOMBER_SEE) {
+                        omp.pid = pids[j];
+                        bombers[j].Vision(fd[j][1], map, &omp, bombers, obstacles, bombs);
+                    } else if (im.type == BOMBER_START) {
+                        omp.pid = pids[j];
+                        bombers[j].Start(fd[j][1], map, &omp);
+
+                    } else if (im.type == BOMBER_PLANT) {
                         //bomber.plant(incoming_message.data.bomb_info.interval, incoming_message.data.bomb_info.radius);
-                    } else if (incoming_message.type == BOMB_EXPLODE) {
+                    } else if (im.type == BOMB_EXPLODE) {
                         //bomber.explode();
                     }
                 }
             }
         }
+    }
+}
+
+void reap_children(std::vector<pid_t>& pids) {
+    for (int i = 0; i < pids.size(); i++) {
+        waitpid(pids[i], NULL, 0);
     }
 }
