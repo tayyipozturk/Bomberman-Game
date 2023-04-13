@@ -49,7 +49,7 @@ void Bomber::Start(int socket, Map& map, omp* omp) {
     print_output(NULL, omp, NULL, NULL);
 }
 
-void Bomber::Vision(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs) {
+void Bomber::See(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs) {
     std::vector<od> vision = getVision(bombers, obstacles, bombs);
     od* objects = (od*) malloc(sizeof(od) * vision.size());
     for (int i=0 ; i < vision.size() ; i++) {
@@ -104,4 +104,65 @@ std::vector<od> Bomber::getVision(std::vector<Bomber>& bombers, std::vector<Obst
         }
     }
     return vision;
+}
+
+void Bomber::Move(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs, coordinate target){
+    int target_x = target.x;
+    int target_y = target.y;
+    if (target_x == this->x && (target_y == this->y+1 || target_y== this->y-1)
+            && (target_y >=0 && target_y < map.getHeight())
+            && (map.getOccupancy(target_x, target_y) == EMPTY || map.getOccupancy(target_x, target_y) == BOMB)){
+        omp->m->type = BOMBER_LOCATION;
+        omp->m->data.new_position.x = target_x;
+        omp->m->data.new_position.y = target_y;
+
+        if (map.getOccupancy(target_x, target_y) == BOMB) {
+            map.setBomberAndBomb(target_x, target_y);
+        } else {
+            map.setBomber(target_x, target_y);
+        }
+
+        if (map.getOccupancy(this->x, this->y) == BOMBER_AND_BOMB) {
+            map.setBomb(this->x, this->y);
+        } else {
+            map.setEmpty(this->x, this->y);
+        }
+        this->x = target_x;
+        this->y = target_y;
+        send_message(socket, omp->m);
+        print_output(NULL, omp, NULL, NULL);
+        return;
+    }
+    else if (target_y == this->y && (target_x == this->x+1 || target_x == this->x-1)
+            && (target_x >=0 && target_x < map.getWidth())
+            && (map.getOccupancy(target_x, target_y) == EMPTY || map.getOccupancy(target_x, target_y) == BOMB)){
+        omp->m->type = BOMBER_LOCATION;
+        omp->m->data.new_position.x = target_x;
+        omp->m->data.new_position.y = target_y;
+
+        if (map.getOccupancy(target_x, target_y) == BOMB) {
+            map.setBomberAndBomb(target_x, target_y);
+        } else {
+            map.setBomber(target_x, target_y);
+        }
+
+        if (map.getOccupancy(this->x, this->y) == BOMBER_AND_BOMB) {
+            map.setBomb(this->x, this->y);
+        } else {
+            map.setEmpty(this->x, this->y);
+        }
+        this->x = target_x;
+        this->y = target_y;
+        send_message(socket, omp->m);
+        print_output(NULL, omp, NULL, NULL);
+        return;
+    }
+    else{
+        omp->m->type = BOMBER_LOCATION;
+        omp->m->data.new_position.x = this->x;
+        omp->m->data.new_position.y = this->y;
+        send_message(socket, omp->m);
+        print_output(NULL, omp, NULL, NULL);
+        return;
+    }
 }

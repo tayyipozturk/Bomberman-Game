@@ -47,18 +47,23 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                     imp.pid = pids[j];
                     imp.m = &im;
                     print_output(&imp, NULL, NULL, NULL);
-                    if (im.type == BOMBER_MOVE) {
-                        //bomber.move(incoming_message.data.target_position);
-                    } else if (im.type == BOMBER_SEE) {
-                        omp.pid = pids[j];
-                        bombers[j].Vision(fd[j][1], map, &omp, bombers, obstacles, bombs);
-                    } else if (im.type == BOMBER_START) {
+                    if (im.type == BOMBER_START) {
                         omp.pid = pids[j];
                         bombers[j].Start(fd[j][1], map, &omp);
-
-                    } else if (im.type == BOMBER_PLANT) {
+                    }
+                     else if (im.type == BOMBER_SEE) {
+                        omp.pid = pids[j];
+                        bombers[j].See(fd[j][1], map, &omp, bombers, obstacles, bombs);
+                    }
+                    else if (im.type == BOMBER_MOVE) {
+                        omp.pid = pids[j];
+                        coordinate target = im.data.target_position;
+                        bombers[j].Move(fd[j][1], map, &omp, bombers, obstacles, bombs, target);
+                    }
+                    else if (im.type == BOMBER_PLANT) {
                         //bomber.plant(incoming_message.data.bomb_info.interval, incoming_message.data.bomb_info.radius);
-                    } else if (im.type == BOMB_EXPLODE) {
+                    }
+                    else if (im.type == BOMB_EXPLODE) {
                         //bomber.explode();
                     }
                 }
