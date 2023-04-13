@@ -23,7 +23,7 @@ extern "C" {
 
 void pipe_bombers(int n, int fd[][2]);
 void fork_bombers(std::vector<Bomber>& bombers, int fd[][2], std::vector<pid_t>& pids);
-void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs, Map& map, int fd[][2], std::vector<pid_t>& pids);
+void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs, Map& map, int fd[][2], int** fd_bombs, std::vector<pid_t>& pids, std::vector<pid_t>& bomb_pids);
 void reap_children(std::vector<pid_t>& pids);
 
 #endif //CONTROLLER_H

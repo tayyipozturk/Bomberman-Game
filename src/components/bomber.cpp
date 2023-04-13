@@ -1,5 +1,7 @@
 #include "bomber.h"
 
+int Bomber::aliveCount = 0;
+
 Bomber::Bomber(int x, int y, int argumentCount, char** arguments) {
     this->x = x;
     this->y = y;
@@ -26,19 +28,17 @@ char** Bomber::getArgs() {
 }
 
 void Bomber::setIsAlive(bool isAlive) {
-    this->isAlive = isAlive;
-    if (isAlive) {
+    if (isAlive && !this->isAlive) {
         aliveCount++;
-    } else {
+    } else if (!isAlive && this->isAlive) {
         aliveCount--;
     }
+    this->isAlive = isAlive;
 }
 
 bool Bomber::getIsAlive() {
     return this->isAlive;
 }
-
-int Bomber::aliveCount = 0;
 
 void Bomber::Start(int socket, Map& map, omp* omp) {
     map.setBomber(this->getX(), this->getY());
@@ -111,12 +111,12 @@ void Bomber::Move(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, 
     int target_y = target.y;
     if (target_x == this->x && (target_y == this->y+1 || target_y== this->y-1)
             && (target_y >=0 && target_y < map.getHeight())
-            && (map.getOccupancy(target_x, target_y) == EMPTY || map.getOccupancy(target_x, target_y) == BOMB)){
+            && (map.getOccupancy(target_x, target_y) == EMPTY || map.getOccupancy(target_x, target_y) == BOMB_OBJ)){
         omp->m->type = BOMBER_LOCATION;
         omp->m->data.new_position.x = target_x;
         omp->m->data.new_position.y = target_y;
 
-        if (map.getOccupancy(target_x, target_y) == BOMB) {
+        if (map.getOccupancy(target_x, target_y) == BOMB_OBJ) {
             map.setBomberAndBomb(target_x, target_y);
         } else {
             map.setBomber(target_x, target_y);
@@ -135,12 +135,12 @@ void Bomber::Move(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, 
     }
     else if (target_y == this->y && (target_x == this->x+1 || target_x == this->x-1)
             && (target_x >=0 && target_x < map.getWidth())
-            && (map.getOccupancy(target_x, target_y) == EMPTY || map.getOccupancy(target_x, target_y) == BOMB)){
+            && (map.getOccupancy(target_x, target_y) == EMPTY || map.getOccupancy(target_x, target_y) == BOMB_OBJ)){
         omp->m->type = BOMBER_LOCATION;
         omp->m->data.new_position.x = target_x;
         omp->m->data.new_position.y = target_y;
 
-        if (map.getOccupancy(target_x, target_y) == BOMB) {
+        if (map.getOccupancy(target_x, target_y) == BOMB_OBJ) {
             map.setBomberAndBomb(target_x, target_y);
         } else {
             map.setBomber(target_x, target_y);
