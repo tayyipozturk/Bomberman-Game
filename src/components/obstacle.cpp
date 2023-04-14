@@ -18,6 +18,10 @@ int Obstacle::getDurability() {
     return durability;
 }
 
+void Obstacle::setDurability(int durability) {
+    this->durability = durability;
+}
+
 void Obstacle::Print() {
     std::cout << "Obstacle: " << x << " " << y << " " << durability << std::endl;
 }

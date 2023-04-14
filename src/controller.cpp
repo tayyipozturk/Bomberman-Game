@@ -43,9 +43,70 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
     struct pollfd* pfd_bombs = nullptr;
 
     int timeout = 1000;  // timeout in milliseconds
-    while (Bomber::aliveCount > 1) {
+    while (Bomber::aliveCount > 0) {
+        int bomb_events = poll(pfd_bombs, bombs.size(), timeout);
+        if (bomb_events > 0) {
+            for (int j = 0; j < bombs.size(); j++) {
+                if (pfd_bombs[j].revents & POLLIN) {
+                    read_data(fd_bombs[j][1], &im);
+                    imp.pid = pids[j];
+                    imp.m = &im;
+                    print_output(&imp, NULL, NULL, NULL);
+                    if (im.type == BOMB_EXPLODE) {
+                        std::vector<Bomber> bomberToBeRemoved;
+                        std::vector<Obstacle> obstacleToBeRemoved;
+                        std::vector<od> targetObjects = bombs[j].getVision(bombs[j].getRadius(), map);
+                        for (auto& targetObject : targetObjects) {
+                            if (targetObject.type == BOMBER) {
+                                for (int i = bombers.size()-1; i>=0; i--) {
+                                    if (Bomber::aliveCount == 1) {
+                                        break;
+                                    }
+                                    if (bombers[i].getX() == targetObject.position.x && bombers[i].getY() == targetObject.position.y) {
+                                        bombers[i].setIsAlive(false);
+                                        bomberToBeRemoved.push_back(bombers[i]);
+                                    }
+                                }
+                            } else if (targetObject.type == OBSTACLE) {
+                                for (int i = obstacles.size()-1; i>=0; i--) {
+                                    if (obstacles[i].getX() == targetObject.position.x && obstacles[i].getY() == targetObject.position.y) {
+                                        if (obstacles[i].getDurability() != -1){
+                                            obstacles[i].setDurability(obstacles[i].getDurability() - 1);
+                                            if (obstacles[i].getDurability() == 0) {
+                                                obstacleToBeRemoved.push_back(obstacles[i]);
+                                                obstacles.erase(obstacles.begin() + i);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        bombs[j].setIsLive(false);
+                        if(map.getOccupancy(bombs[j].getX(), bombs[j].getY()) == BOMB_OBJ){
+                            map.setEmpty(bombs[j].getX(), bombs[j].getY());
+                        }
+                        else if(map.getOccupancy(bombs[j].getX(), bombs[j].getY()) == BOMBER_AND_BOMB){
+                            map.setBomber(bombs[j].getX(), bombs[j].getY());
+                        }
+
+                        for (auto& bomber : bomberToBeRemoved) {
+                            if (map.getOccupancy(bomber.getX(), bomber.getY()) == BOMBER_OBJ) {
+                                map.setEmpty(bomber.getX(), bomber.getY());
+                            }
+                            else if (map.getOccupancy(bomber.getX(), bomber.getY()) == BOMBER_AND_BOMB) {
+                                map.setBomb(bomber.getX(), bomber.getY());
+                            }
+                        }
+
+                        for (auto& obstacle : obstacleToBeRemoved) {
+                            map.setEmpty(obstacle.getX(), obstacle.getY());
+                        }
+                    }
+                }
+            }
+        }
+
         int num_events = poll(pfd, bombers.size(), timeout);
-        num_events += poll(pfd_bombs, bombs.size(), timeout);
         if (num_events > 0) {
             for (int j = 0; j < bombers.size(); j++) {
                 if (pfd[j].revents & POLLIN) {
@@ -53,11 +114,24 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                     imp.pid = pids[j];
                     imp.m = &im;
                     print_output(&imp, NULL, NULL, NULL);
+                    if (Bomber::aliveCount == 1 && bombers[j].getIsAlive()) {
+                        omp.pid = pids[j];
+                        om.type = BOMBER_WIN;
+                        send_message(fd[j][1], &om);
+                        print_output(NULL, &omp, NULL, NULL);
+                        goto end;
+                    }
+                    if (!bombers[j].getIsAlive()) {
+                        omp.pid = pids[j];
+                        om.type = BOMBER_DIE;
+                        send_message(fd[j][1], &om);
+                        print_output(NULL, &omp, NULL, NULL);
+                    }
                     if (im.type == BOMBER_START) {
                         omp.pid = pids[j];
                         bombers[j].Start(fd[j][1], map, &omp);
                     }
-                     else if (im.type == BOMBER_SEE) {
+                    else if (im.type == BOMBER_SEE) {
                         omp.pid = pids[j];
                         bombers[j].See(fd[j][1], map, &omp, bombers, obstacles, bombs);
                     }
@@ -75,6 +149,7 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                             // add bomb object to the bombs vector
                             Bomb bomb = Bomb(bombers[j].getX(), bombers[j].getY(), radius, interval);
                             bombs.push_back(bomb);
+                            map.setBomberAndBomb(bombers[j].getX(), bombers[j].getY());
                             fd_bombs = (int**) realloc(fd_bombs, bombs.size() * sizeof(int*));
                             fd_bombs[bombs.size() - 1] = (int*) malloc(2 * sizeof(int));
                             PIPE(fd_bombs[bombs.size() - 1]);
@@ -82,7 +157,6 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                             pfd_bombs[bombs.size() - 1].fd = fd_bombs[bombs.size() - 1][1];
                             pfd_bombs[bombs.size() - 1].events = POLLIN;
                             pfd_bombs[bombs.size() - 1].revents = 0;
-
                             pid_t pid = fork();
                             if (pid == 0) {
                                 std::string file = "./bomb";
@@ -93,7 +167,7 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                                 strcpy(args[1], timer);
                                 args[2] = NULL;
 
-                                close(fd_bombs[bombs.size() - 1][1]);
+                                //close(fd_bombs[bombs.size() - 1][1]);
                                 dup2(fd_bombs[bombs.size() - 1][0], STDIN_FILENO);
                                 dup2(fd_bombs[bombs.size() - 1][0], STDOUT_FILENO);
                                 close(fd_bombs[bombs.size() - 1][0]);
@@ -104,11 +178,12 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                                 bomb_pids.push_back(pid);
                                 close(fd_bombs[bombs.size() - 1][0]);
                                 dup2(fd_bombs[bombs.size() - 1][1], STDIN_FILENO);
-                                close(fd_bombs[bombs.size() - 1][1]);
+                                //close(fd_bombs[bombs.size() - 1][1]);
                                 omp.pid = pids[j];
                                 omp.m->type = BOMBER_PLANT_RESULT;
                                 omp.m->data.planted = 1;
                                 send_message(fd[j][1], omp.m);
+                                print_output(NULL, &omp, NULL, NULL);
                             }
                         }
                         else{
@@ -116,24 +191,17 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                             omp.m->type = BOMBER_PLANT_RESULT;
                             omp.m->data.planted = 0;
                             send_message(fd[j][1], omp.m);
+                            print_output(NULL, &omp, NULL, NULL);
                         }
 
                     }
                 }
             }
-            for (int j = 0; j < bombs.size(); j++) {
-                if (pfd_bombs[j].revents & POLLIN) {
-                    read_data(fd_bombs[j][1], &im);
-                    imp.pid = pids[j];
-                    imp.m = &im;
-                    print_output(&imp, NULL, NULL, NULL);
-                    if (im.type == BOMB_EXPLODE) {
-                        //bombs[j].Explode(fd_bombs[j][1], map, bombers, obstacles, bombs);
-                    }
-                }
-            }
         }
+        sleep(1);
     }
+    end:
+    int p = 0;
 }
 
 void reap_children(std::vector<pid_t>& pids) {

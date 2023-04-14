@@ -2,6 +2,7 @@
 #define BOMB_H
 
 #include <iostream>
+#include "map.h"
 
 class Bomb {
 public:
@@ -12,9 +13,9 @@ public:
     long getInterval();
     void setIsLive(bool isAlive);
     bool getIsLive();
-    void explode();
     void Print();
     static int liveCount;
+    std::vector<od> getVision(unsigned int radius, Map& map);
 private:
     int x;
     int y;

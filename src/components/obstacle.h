@@ -9,6 +9,7 @@ public:
     int getX();
     int getY();
     int getDurability();
+    void setDurability(int durability);
     void Print();
 private:
     int x;
