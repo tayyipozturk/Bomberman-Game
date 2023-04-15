@@ -1,6 +1,7 @@
 #include "bomber.h"
 
 int Bomber::aliveCount = 0;
+int Bomber::dieLog = 0;
 
 Bomber::Bomber(int x, int y, int argumentCount, char** arguments) {
     this->x = x;
@@ -79,6 +80,13 @@ std::vector<od> Bomber::getVision(std::vector<Bomber>& bombers, std::vector<Obst
             vision.push_back(object);
         }
         else if (bombers[i].getY() >= min_y && bombers[i].getY() <= max_y && bombers[i].getX() == this->getX() && bombers[i].getY() != this->getY()) {
+            od object;
+            object.type = BOMBER;
+            object.position.x = bombers[i].getX();
+            object.position.y = bombers[i].getY();
+            vision.push_back(object);
+        }
+        else if (bombers[i].getX() == this->getX() && bombers[i].getY() == this->getY()) {
             od object;
             object.type = BOMBER;
             object.position.x = bombers[i].getX();

@@ -27,6 +27,7 @@ public:
     bool getIsAlive();
     void Print();
     static int aliveCount;
+    static int dieLog;
 
     void Start(int socket, Map& map, omp* omp);
     void See(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs);
