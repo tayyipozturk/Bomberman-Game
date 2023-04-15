@@ -50,8 +50,8 @@ void Bomber::Start(int socket, Map& map, omp* omp) {
     print_output(NULL, omp, NULL, NULL);
 }
 
-void Bomber::See(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs) {
-    std::vector<od> vision = getVision(bombers, obstacles, bombs);
+void Bomber::See(int socket, Map& map, omp* omp) {
+    std::vector<od> vision = getVision(map);
     od* objects = (od*) malloc(sizeof(od) * vision.size());
     for (int i=0 ; i < vision.size() ; i++) {
         objects[i] = vision[i];
@@ -64,50 +64,127 @@ void Bomber::See(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, s
     print_output(NULL, omp, NULL, objects);
 }
 
-std::vector<od> Bomber::getVision(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs) {
+std::vector<od> Bomber::getVision(Map &map) {
     std::vector<od> vision;
-    int min_x = x - 3;
-    int max_x = x + 3;
-    int min_y = y - 3;
-    int max_y = y + 3;
+    bool up, down, left, right;                                     // flags to check if a way is blocked by an obstacle
+    up = down = left = right = true;
 
-    for (int i=0 ; i < bombers.size() ; i++) {
-        if (bombers[i].getX() >= min_x && bombers[i].getX() <= max_x && bombers[i].getY() == this->getY() && bombers[i].getX() != this->getX()) {
+    for (int i = 1; i <= 3; i++) {
+        if (up && this->y - i >= 0) {
             od object;
-            object.type = BOMBER;
-            object.position.x = bombers[i].getX();
-            object.position.y = bombers[i].getY();
-            vision.push_back(object);
-        }
-        else if (bombers[i].getY() >= min_y && bombers[i].getY() <= max_y && bombers[i].getX() == this->getX() && bombers[i].getY() != this->getY()) {
-            od object;
-            object.type = BOMBER;
-            object.position.x = bombers[i].getX();
-            object.position.y = bombers[i].getY();
-            vision.push_back(object);
-        }
-        else if (bombers[i].getX() == this->getX() && bombers[i].getY() == this->getY()) {
-            od object;
-            object.type = BOMBER;
-            object.position.x = bombers[i].getX();
-            object.position.y = bombers[i].getY();
+            object.position.x = this->x;
+            object.position.y = this->y - i;
+            if (map.getOccupancy(this->x, this->y - i) == BOMB_OBJ){
+                object.type = BOMB;
+            }
+            else if (map.getOccupancy(this->x, this->y - i) == BOMBER_OBJ){
+                object.type = BOMBER;
+            }
+            else if (map.getOccupancy(this->x, this->y - i) == OBSTACLE_OBJ){
+                object.type = OBSTACLE;
+                up = false;
+            }
+            else if (map.getOccupancy(this->x, this->y - i) == BOMBER_AND_BOMB){
+                object.type = BOMB;
+                od object2;
+                object2.position.x = this->x;
+                object2.position.y = this->y - i;
+                object2.type = BOMBER;
+                vision.push_back(object2);
+            }
+            else{
+                continue;
+            }
             vision.push_back(object);
         }
     }
 
-    for (int i=0 ; i < obstacles.size() ; i++) {
-        if (obstacles[i].getX() >= min_x && obstacles[i].getX() <= max_x && obstacles[i].getY() == this->getY()) {
+    for (int i = 1; i <= 3; i++) {
+        if (down && this->y + i < map.getHeight()) {
             od object;
-            object.type = OBSTACLE;
-            object.position.x = obstacles[i].getX();
-            object.position.y = obstacles[i].getY();
+            object.position.x = this->x;
+            object.position.y = this->y + i;
+            if (map.getOccupancy(this->x, this->y + i) == BOMB_OBJ){
+                object.type = BOMB;
+            }
+            else if (map.getOccupancy(this->x, this->y + i) == BOMBER_OBJ){
+                object.type = BOMBER;
+            }
+            else if (map.getOccupancy(this->x, this->y + i) == OBSTACLE_OBJ){
+                object.type = OBSTACLE;
+                down = false;
+            }
+            else if (map.getOccupancy(this->x, this->y + i) == BOMBER_AND_BOMB){
+                object.type = BOMB;
+                od object2;
+                object2.position.x = this->x;
+                object2.position.y = this->y + i;
+                object2.type = BOMBER;
+                vision.push_back(object2);
+            }
+            else{
+                continue;
+            }
             vision.push_back(object);
         }
-        else if (obstacles[i].getY() >= min_y && obstacles[i].getY() <= max_y && obstacles[i].getX() == this->getX()) {
+    }
+
+    for (int i = 1; i <= 3; i++) {
+        if (left && this->x - i >= 0) {
             od object;
-            object.type = OBSTACLE;
-            object.position.x = obstacles[i].getX();
-            object.position.y = obstacles[i].getY();
+            object.position.x = this->x - i;
+            object.position.y = this->y;
+            if (map.getOccupancy(this->x - i, this->y) == BOMB_OBJ){
+                object.type = BOMB;
+            }
+            else if (map.getOccupancy(this->x - i, this->y) == BOMBER_OBJ){
+                object.type = BOMBER;
+            }
+            else if (map.getOccupancy(this->x - i, this->y) == OBSTACLE_OBJ){
+                object.type = OBSTACLE;
+                left = false;
+            }
+            else if (map.getOccupancy(this->x - i, this->y) == BOMBER_AND_BOMB){
+                object.type = BOMB;
+                od object2;
+                object2.position.x = this->x - i;
+                object2.position.y = this->y;
+                object2.type = BOMBER;
+                vision.push_back(object2);
+            }
+            else{
+                continue;
+            }
+            vision.push_back(object);
+        }
+    }
+
+    for (int i = 1; i <= 3; i++) {
+        if (right && this->x + i < map.getWidth()) {
+            od object;
+            object.position.x = this->x + i;
+            object.position.y = this->y;
+            if (map.getOccupancy(this->x + i, this->y) == BOMB_OBJ){
+                object.type = BOMB;
+            }
+            else if (map.getOccupancy(this->x + i, this->y) == BOMBER_OBJ){
+                object.type = BOMBER;
+            }
+            else if (map.getOccupancy(this->x + i, this->y) == OBSTACLE_OBJ){
+                object.type = OBSTACLE;
+                right = false;
+            }
+            else if (map.getOccupancy(this->x + i, this->y) == BOMBER_AND_BOMB){
+                object.type = BOMB;
+                od object2;
+                object2.position.x = this->x + i;
+                object2.position.y = this->y;
+                object2.type = BOMBER;
+                vision.push_back(object2);
+            }
+            else{
+                continue;
+            }
             vision.push_back(object);
         }
     }

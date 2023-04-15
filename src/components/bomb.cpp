@@ -33,6 +33,7 @@ void Bomb::setIsLive(bool isLive) {
     } else if (!isLive && this->isLive) {
         liveCount--;
     }
+    this->isLive = isLive;
 }
 
 bool Bomb::getIsLive() {
@@ -47,7 +48,13 @@ std::vector<od>  Bomb::getVision(unsigned int radius, Map& map) {
     std::vector<od> damagedObjects;
     bool up, down, left, right;                                     // flags to check if a way is blocked by an obstacle
     up = down = left = right = true;
-    for (unsigned int i = 1; i <= radius; i++) {
+    if(map.getOccupancy(this->x, this->y) == BOMBER_OBJ) {          // check if the bomb is on a bomber
+        damagedObjects.push_back({{this->x, this->y}, BOMBER});
+    }
+    else if (map.getOccupancy(this->x, this->y) == BOMBER_AND_BOMB) {
+        damagedObjects.push_back({{this->x, this->y}, BOMBER});
+    }
+    for (int i = 1; i <= radius; i++) {
         if (right && (this->x + i < map.getWidth())) {              // check if the way is blocked by an obstacle and the index is in the map
             if (map.getOccupancy(this->x + i, this->y) == OBSTACLE_OBJ) {
                 damagedObjects.push_back({{this->x + i, this->y}, OBSTACLE});

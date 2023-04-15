@@ -32,6 +32,10 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
     omp omp;
     om om;
     omp.m = &om;
+    bool done = false;
+    bool end = false;
+    std::ofstream logfile;
+    logfile.open("log.txt", std::ios_base::app); // append instead of overwrite
     //create pfd arrays for each pipe
     struct pollfd pfd[bombers.size()];
     for (int j = 0; j < bombers.size(); j++) {
@@ -42,24 +46,27 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
     // create pfd array for bombs
     struct pollfd* pfd_bombs = nullptr;
 
-    int timeout = 1000;  // timeout in milliseconds
-    while (Bomber::aliveCount > 0) {
-        int bomb_events = poll(pfd_bombs, bombs.size(), timeout);
-        if (bomb_events > 0) {
+    while (Bomber::aliveCount > 0 && !end) {
+        int bomb_events = poll(pfd_bombs, bombs.size(), 0);
+        if (bomb_events > 0 && Bomb::liveCount > 0) {
             for (int j = 0; j < bombs.size(); j++) {
                 if (pfd_bombs[j].revents & POLLIN) {
                     read_data(fd_bombs[j][1], &im);
-                    imp.pid = pids[j];
+                    imp.pid = bomb_pids[j];
                     imp.m = &im;
-                    print_output(&imp, NULL, NULL, NULL);
                     if (im.type == BOMB_EXPLODE) {
+                        if (logfile.is_open()) {
+                            logfile << "BOMB_EXPLODE" << std::endl;
+                            logfile.close();
+                        }
                         std::vector<Bomber> bomberToBeRemoved;
                         std::vector<Obstacle> obstacleToBeRemoved;
                         std::vector<od> targetObjects = bombs[j].getVision(bombs[j].getRadius(), map);
                         for (auto& targetObject : targetObjects) {
                             if (targetObject.type == BOMBER) {
                                 for (int i = bombers.size()-1; i>=0; i--) {
-                                    if (Bomber::aliveCount == 1) {
+                                    if (Bomber::aliveCount <= 1) {
+                                        done = true;
                                         break;
                                     }
                                     if (bombers[i].getX() == targetObject.position.x && bombers[i].getY() == targetObject.position.y) {
@@ -67,13 +74,16 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                                         bomberToBeRemoved.push_back(bombers[i]);
                                     }
                                 }
+                                if (done) {
+                                    break;
+                                }
                             } else if (targetObject.type == OBSTACLE) {
                                 for (int i = obstacles.size()-1; i>=0; i--) {
                                     if (obstacles[i].getX() == targetObject.position.x && obstacles[i].getY() == targetObject.position.y) {
+                                        obstacleToBeRemoved.push_back(obstacles[i]);
                                         if (obstacles[i].getDurability() != -1){
                                             obstacles[i].setDurability(obstacles[i].getDurability() - 1);
                                             if (obstacles[i].getDurability() == 0) {
-                                                obstacleToBeRemoved.push_back(obstacles[i]);
                                                 obstacles.erase(obstacles.begin() + i);
                                             }
                                         }
@@ -81,6 +91,7 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                                 }
                             }
                         }
+                        print_output(&imp, NULL, NULL, NULL);
                         bombs[j].setIsLive(false);
                         if(map.getOccupancy(bombs[j].getX(), bombs[j].getY()) == BOMB_OBJ){
                             map.setEmpty(bombs[j].getX(), bombs[j].getY());
@@ -100,108 +111,135 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
 
                         for (auto& obstacle : obstacleToBeRemoved) {
                             map.setEmpty(obstacle.getX(), obstacle.getY());
+                            obsd obsd;
+                            obsd.position.x = obstacle.getX();
+                            obsd.position.y = obstacle.getY();
+                            obsd.remaining_durability = obstacle.getDurability();
+                            print_output(NULL, NULL, &obsd, NULL);
                         }
                     }
                 }
             }
         }
 
-        int num_events = poll(pfd, bombers.size(), timeout);
+        int num_events = poll(pfd, bombers.size(),0);
         if (num_events > 0) {
             for (int j = 0; j < bombers.size(); j++) {
                 if (pfd[j].revents & POLLIN) {
                     read_data(fd[j][1], &im);
                     imp.pid = pids[j];
                     imp.m = &im;
-                    print_output(&imp, NULL, NULL, NULL);
-                    if (Bomber::aliveCount == 1 && bombers[j].getIsAlive()) {
-                        omp.pid = pids[j];
-                        om.type = BOMBER_WIN;
-                        send_message(fd[j][1], &om);
-                        print_output(NULL, &omp, NULL, NULL);
-                        goto end;
-                    }
                     if (!bombers[j].getIsAlive()) {
                         omp.pid = pids[j];
                         om.type = BOMBER_DIE;
                         send_message(fd[j][1], &om);
                         print_output(NULL, &omp, NULL, NULL);
+                        Bomber::dieLog++;
                     }
-                    if (im.type == BOMBER_START) {
-                        omp.pid = pids[j];
-                        bombers[j].Start(fd[j][1], map, &omp);
-                    }
-                    else if (im.type == BOMBER_SEE) {
-                        omp.pid = pids[j];
-                        bombers[j].See(fd[j][1], map, &omp, bombers, obstacles, bombs);
-                    }
-                    else if (im.type == BOMBER_MOVE) {
-                        omp.pid = pids[j];
-                        coordinate target = im.data.target_position;
-                        bombers[j].Move(fd[j][1], map, &omp, bombers, obstacles, bombs, target);
-                    }
-                    else if (im.type == BOMBER_PLANT) {
-                        if (map.getOccupancy(bombers[j].getX(), bombers[j].getY()) != BOMB_OBJ || map.getOccupancy(bombers[j].getX(), bombers[j].getY()) != BOMBER_AND_BOMB){
-                            long interval = im.data.bomb_info.interval;
-                            unsigned int radius = im.data.bomb_info.radius;
-                            char timer[32];
-                            sprintf(timer, "%ld", interval);
-                            // add bomb object to the bombs vector
-                            Bomb bomb = Bomb(bombers[j].getX(), bombers[j].getY(), radius, interval);
-                            bombs.push_back(bomb);
-                            map.setBomberAndBomb(bombers[j].getX(), bombers[j].getY());
-                            fd_bombs = (int**) realloc(fd_bombs, bombs.size() * sizeof(int*));
-                            fd_bombs[bombs.size() - 1] = (int*) malloc(2 * sizeof(int));
-                            PIPE(fd_bombs[bombs.size() - 1]);
-                            pfd_bombs = (struct pollfd*) realloc(pfd_bombs, bombs.size() * sizeof(struct pollfd));
-                            pfd_bombs[bombs.size() - 1].fd = fd_bombs[bombs.size() - 1][1];
-                            pfd_bombs[bombs.size() - 1].events = POLLIN;
-                            pfd_bombs[bombs.size() - 1].revents = 0;
-                            pid_t pid = fork();
-                            if (pid == 0) {
-                                std::string file = "./bomb";
-                                char** args = (char**) malloc(3 * sizeof(char*));
-                                args[0] = (char*) malloc(file.length() + 1);
-                                strcpy(args[0], file.c_str());
-                                args[1] = (char*) malloc(strlen(timer) + 1);
-                                strcpy(args[1], timer);
-                                args[2] = NULL;
+                    else{
+                        if (Bomber::aliveCount == 1) {
+                            omp.pid = pids[j];
+                            om.type = BOMBER_WIN;
+                            send_message(fd[j][1], &om);
+                            print_output(NULL, &omp, NULL, NULL);
+                            end = true;
+                            break;
+                        }
+                        else if (im.type == BOMBER_START) {
+                            print_output(&imp, NULL, NULL, NULL);
+                            omp.pid = pids[j];
+                            bombers[j].Start(fd[j][1], map, &omp);
+                        }
+                        else if (im.type == BOMBER_SEE) {
+                            print_output(&imp, NULL, NULL, NULL);
+                            omp.pid = pids[j];
+                            bombers[j].See(fd[j][1], map, &omp);
+                        }
+                        else if (im.type == BOMBER_MOVE) {
+                            print_output(&imp, NULL, NULL, NULL);
+                            omp.pid = pids[j];
+                            coordinate target = im.data.target_position;
+                            bombers[j].Move(fd[j][1], map, &omp, bombers, obstacles, bombs, target);
+                        }
+                        else if (im.type == BOMBER_PLANT) {
+                            print_output(&imp, NULL, NULL, NULL);
+                            if (map.getOccupancy(bombers[j].getX(), bombers[j].getY()) != BOMB_OBJ || map.getOccupancy(bombers[j].getX(), bombers[j].getY()) != BOMBER_AND_BOMB){
+                                long interval = im.data.bomb_info.interval;
+                                unsigned int radius = im.data.bomb_info.radius;
+                                char timer[32];
+                                sprintf(timer, "%ld", interval);
+                                // add bomb object to the bombs vector
+                                Bomb bomb = Bomb(bombers[j].getX(), bombers[j].getY(), radius, interval);
+                                bombs.push_back(bomb);
+                                map.setBomberAndBomb(bombers[j].getX(), bombers[j].getY());
+                                fd_bombs = (int**) realloc(fd_bombs, bombs.size() * sizeof(int*));
+                                fd_bombs[bombs.size() - 1] = (int*) malloc(2 * sizeof(int));
+                                PIPE(fd_bombs[bombs.size() - 1]);
+                                pfd_bombs = (struct pollfd*) realloc(pfd_bombs, bombs.size() * sizeof(struct pollfd));
+                                pfd_bombs[bombs.size() - 1].fd = fd_bombs[bombs.size() - 1][1];
+                                pfd_bombs[bombs.size() - 1].events = POLLIN;
+                                pfd_bombs[bombs.size() - 1].revents = 0;
+                                pid_t pid = fork();
+                                if (pid == 0) {
+                                    std::string file = "./bomb";
+                                    char** args = (char**) malloc(3 * sizeof(char*));
+                                    args[0] = (char*) malloc(file.length() + 1);
+                                    strcpy(args[0], file.c_str());
+                                    args[1] = (char*) malloc(strlen(timer) + 1);
+                                    strcpy(args[1], timer);
+                                    args[2] = NULL;
 
-                                //close(fd_bombs[bombs.size() - 1][1]);
-                                dup2(fd_bombs[bombs.size() - 1][0], STDIN_FILENO);
-                                dup2(fd_bombs[bombs.size() - 1][0], STDOUT_FILENO);
-                                close(fd_bombs[bombs.size() - 1][0]);
+                                    //close(fd_bombs[bombs.size() - 1][1]);
+                                    dup2(fd_bombs[bombs.size() - 1][0], STDIN_FILENO);
+                                    dup2(fd_bombs[bombs.size() - 1][0], STDOUT_FILENO);
+                                    close(fd_bombs[bombs.size() - 1][0]);
 
-                                execv(args[0], args);
+                                    execv(args[0], args);
+                                }
+                                else {
+                                    bomb_pids.push_back(pid);
+                                    close(fd_bombs[bombs.size() - 1][0]);
+                                    dup2(fd_bombs[bombs.size() - 1][1], STDIN_FILENO);
+                                    //close(fd_bombs[bombs.size() - 1][1]);
+                                    omp.pid = pids[j];
+                                    omp.m->type = BOMBER_PLANT_RESULT;
+                                    omp.m->data.planted = 1;
+                                    send_message(fd[j][1], omp.m);
+                                    print_output(NULL, &omp, NULL, NULL);
+                                    logfile << "Location of bomb " << pids[j] << " is (" << bombers[j].getX() << "," << bombers[j].getY() << ")" << std::endl;
+                                }
                             }
-                            else {
-                                bomb_pids.push_back(pid);
-                                close(fd_bombs[bombs.size() - 1][0]);
-                                dup2(fd_bombs[bombs.size() - 1][1], STDIN_FILENO);
-                                //close(fd_bombs[bombs.size() - 1][1]);
+                            else{
                                 omp.pid = pids[j];
                                 omp.m->type = BOMBER_PLANT_RESULT;
-                                omp.m->data.planted = 1;
+                                omp.m->data.planted = 0;
                                 send_message(fd[j][1], omp.m);
                                 print_output(NULL, &omp, NULL, NULL);
                             }
                         }
-                        else{
-                            omp.pid = pids[j];
-                            omp.m->type = BOMBER_PLANT_RESULT;
-                            omp.m->data.planted = 0;
-                            send_message(fd[j][1], omp.m);
-                            print_output(NULL, &omp, NULL, NULL);
-                        }
-
                     }
                 }
             }
         }
         sleep(1);
     }
-    end:
-    int p = 0;
+    for (int i = 0; i < bombs.size(); i++) {
+        if (bombs[i].getIsLive()){
+            read_data(fd_bombs[i][1], &im);
+            imp.pid = bomb_pids[i];
+            imp.m = &im;
+            if (im.type == BOMB_EXPLODE) {
+                print_output(&imp, NULL, NULL, NULL);
+                bombs[i].setIsLive(false);
+                if (map.getOccupancy(bombs[i].getX(), bombs[i].getY()) == BOMBER_AND_BOMB){
+                    map.setBomber(bombs[i].getX(), bombs[i].getY());
+                }
+                else{
+                    map.setEmpty(bombs[i].getX(), bombs[i].getY());
+                }
+            }
+        }
+    }
 }
 
 void reap_children(std::vector<pid_t>& pids) {

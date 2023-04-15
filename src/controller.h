@@ -18,6 +18,7 @@ extern "C" {
 #include "components/obstacle.h"
 #include "components/bomb.h"
 #include "components/map.h"
+#include <fstream>
 
 #define PIPE(fd) socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, fd)
 

@@ -30,8 +30,8 @@ public:
     static int dieLog;
 
     void Start(int socket, Map& map, omp* omp);
-    void See(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs);
-    std::vector<od> getVision(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs);
+    void See(int socket, Map& map, omp* omp);
+    std::vector<od> getVision(Map& map);
     void Move(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs, coordinate target);
     void PlantBomb(int socket, Map& map, omp* omp, std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::vector<Bomb>& bombs);
 private:
