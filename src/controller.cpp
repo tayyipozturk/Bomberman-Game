@@ -46,7 +46,7 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
     // create pfd array for bombs
     struct pollfd* pfd_bombs = nullptr;
 
-    while (Bomber::aliveCount > 0 && !end) {
+    while (Bomber::aliveCount > 0 && !done) {
         int bomb_events = poll(pfd_bombs, bombs.size(), 0);
         if (bomb_events > 0 && Bomb::liveCount > 0) {
             for (int j = 0; j < bombs.size(); j++) {
@@ -91,7 +91,6 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                                 }
                             }
                         }
-                        print_output(&imp, NULL, NULL, NULL);
                         bombs[j].setIsLive(false);
                         if(map.getOccupancy(bombs[j].getX(), bombs[j].getY()) == BOMB_OBJ){
                             map.setEmpty(bombs[j].getX(), bombs[j].getY());
@@ -109,6 +108,8 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                             }
                         }
 
+                        print_output(&imp, NULL, NULL, NULL);
+
                         for (auto& obstacle : obstacleToBeRemoved) {
                             map.setEmpty(obstacle.getX(), obstacle.getY());
                             obsd obsd;
@@ -116,6 +117,9 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                             obsd.position.y = obstacle.getY();
                             obsd.remaining_durability = obstacle.getDurability();
                             print_output(NULL, NULL, &obsd, NULL);
+                        }
+                        if (done) {
+                            break;
                         }
                     }
                 }
