@@ -11,6 +11,9 @@ extern "C" {
 extern "C" {
     #include "logging.h"
 }
+extern "C" {
+    #include "message.h"
+}
 #include <vector>
 #include <string>
 #include <poll.h>

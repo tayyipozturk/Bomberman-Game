@@ -1,5 +1,8 @@
 #include "controller.h"
 
+imp winner_imp;
+im winner_im;
+
 void pipe_bombers(int size, int fd[][2]) {
     for (int i = 0; i < size; i++) {
         PIPE(fd[i]);
@@ -36,6 +39,7 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
     bool end = false;
     std::ofstream logfile;
     logfile.open("log.txt", std::ios_base::app); // append instead of overwrite
+    int winner = -1;
     //create pfd arrays for each pipe
     struct pollfd pfd[bombers.size()];
     for (int j = 0; j < bombers.size(); j++) {
@@ -46,9 +50,9 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
     // create pfd array for bombs
     struct pollfd* pfd_bombs = nullptr;
 
-    while (Bomber::aliveCount > 0 && !done) {
+    while (Bomber::aliveCount > 0 && !end) {
         int bomb_events = poll(pfd_bombs, bombs.size(), 0);
-        if (bomb_events > 0 && Bomb::liveCount > 0) {
+        if (bomb_events > 0 && !done) {
             for (int j = 0; j < bombs.size(); j++) {
                 if (pfd_bombs[j].revents & POLLIN) {
                     read_data(fd_bombs[j][1], &im);
@@ -127,13 +131,14 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
         }
 
         int num_events = poll(pfd, bombers.size(),0);
-        if (num_events > 0) {
+        if (num_events > 0 && Bomber::dieLog < bombers.size()-1) {
             for (int j = 0; j < bombers.size(); j++) {
                 if (pfd[j].revents & POLLIN) {
                     read_data(fd[j][1], &im);
                     imp.pid = pids[j];
                     imp.m = &im;
                     if (!bombers[j].getIsAlive()) {
+                        print_output(&imp, NULL, NULL, NULL);
                         omp.pid = pids[j];
                         om.type = BOMBER_DIE;
                         send_message(fd[j][1], &om);
@@ -142,12 +147,22 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                     }
                     else{
                         if (Bomber::aliveCount == 1) {
-                            omp.pid = pids[j];
-                            om.type = BOMBER_WIN;
-                            send_message(fd[j][1], &om);
-                            print_output(NULL, &omp, NULL, NULL);
-                            end = true;
-                            break;
+                            winner_im = im;
+                            winner_imp.pid = pids[j];
+                            winner_imp.m = &winner_im;
+                            if(Bomber::dieLog == bombers.size()-1){
+                                print_output(&imp, NULL, NULL, NULL);
+                                omp.pid = pids[j];
+                                om.type = BOMBER_WIN;
+                                send_message(fd[j][1], &om);
+                                print_output(NULL, &omp, NULL, NULL);
+                                end = true;
+                                break;
+                            }
+                            else{
+                                winner = j;
+                                continue;
+                            }
                         }
                         else if (im.type == BOMBER_START) {
                             print_output(&imp, NULL, NULL, NULL);
@@ -224,6 +239,14 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                     }
                 }
             }
+        }
+        if(!end && Bomber::dieLog == bombers.size()-1){
+            print_output(&winner_imp, NULL, NULL, NULL);
+            omp.pid = pids[winner];
+            om.type = BOMBER_WIN;
+            send_message(fd[winner][1], &om);
+            print_output(NULL, &omp, NULL, NULL);
+            end = true;
         }
         sleep(1);
     }
