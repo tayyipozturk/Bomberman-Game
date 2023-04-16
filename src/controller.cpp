@@ -1,8 +1,5 @@
 #include "controller.h"
 
-imp winner_imp;
-im winner_im;
-
 void pipe_bombers(int size, int fd[][2]) {
     for (int i = 0; i < size; i++) {
         PIPE(fd[i]);
@@ -36,10 +33,8 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
     om om;
     omp.m = &om;
     bool done = false;
-    bool end = false;
     std::ofstream logfile;
     logfile.open("log.txt", std::ios_base::app); // append instead of overwrite
-    int winner = -1;
     //create pfd arrays for each pipe
     struct pollfd pfd[bombers.size()];
     for (int j = 0; j < bombers.size(); j++) {
@@ -50,7 +45,7 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
     // create pfd array for bombs
     struct pollfd* pfd_bombs = nullptr;
 
-    while (Bomber::aliveCount > 0 && !end) {
+    while (Bomber::dieLog < bombers.size()) {
         int bomb_events = poll(pfd_bombs, bombs.size(), 0);
         if (bomb_events > 0 && !done) {
             for (int j = 0; j < bombs.size(); j++) {
@@ -58,7 +53,7 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                     read_data(fd_bombs[j][1], &im);
                     imp.pid = bomb_pids[j];
                     imp.m = &im;
-                    if (im.type == BOMB_EXPLODE) {
+                    if (im.type == BOMB_EXPLODE && bombs[j].getIsLive()) {
                         if (logfile.is_open()) {
                             logfile << "BOMB_EXPLODE" << std::endl;
                             logfile.close();
@@ -69,17 +64,14 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                         for (auto& targetObject : targetObjects) {
                             if (targetObject.type == BOMBER) {
                                 for (int i = bombers.size()-1; i>=0; i--) {
-                                    if (Bomber::aliveCount <= 1) {
-                                        done = true;
-                                        break;
-                                    }
                                     if (bombers[i].getX() == targetObject.position.x && bombers[i].getY() == targetObject.position.y) {
+                                        if (Bomber::aliveCount <= 1) {
+                                            done = true;
+                                            break;
+                                        }
                                         bombers[i].setIsAlive(false);
                                         bomberToBeRemoved.push_back(bombers[i]);
                                     }
-                                }
-                                if (done) {
-                                    break;
                                 }
                             } else if (targetObject.type == OBSTACLE) {
                                 for (int i = obstacles.size()-1; i>=0; i--) {
@@ -87,9 +79,9 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                                         obstacleToBeRemoved.push_back(obstacles[i]);
                                         if (obstacles[i].getDurability() != -1){
                                             obstacles[i].setDurability(obstacles[i].getDurability() - 1);
-                                            if (obstacles[i].getDurability() == 0) {
-                                                obstacles.erase(obstacles.begin() + i);
-                                            }
+                                        }
+                                        if (obstacles[i].getDurability() == 0) {
+                                            obstacles.erase(obstacles.begin() + i);
                                         }
                                     }
                                 }
@@ -115,7 +107,9 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                         print_output(&imp, NULL, NULL, NULL);
 
                         for (auto& obstacle : obstacleToBeRemoved) {
-                            map.setEmpty(obstacle.getX(), obstacle.getY());
+                            if (obstacle.getDurability()!=-1){
+                                map.setEmpty(obstacle.getX(), obstacle.getY());
+                            }
                             obsd obsd;
                             obsd.position.x = obstacle.getX();
                             obsd.position.y = obstacle.getY();
@@ -131,38 +125,31 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
         }
 
         int num_events = poll(pfd, bombers.size(),0);
-        if (num_events > 0 && Bomber::dieLog < bombers.size()-1) {
+        if (num_events > 0) {
             for (int j = 0; j < bombers.size(); j++) {
                 if (pfd[j].revents & POLLIN) {
                     read_data(fd[j][1], &im);
                     imp.pid = pids[j];
                     imp.m = &im;
-                    if (!bombers[j].getIsAlive()) {
+                    if (!bombers[j].getIsAlive() && !bombers[j].getIsKilled()) {
                         print_output(&imp, NULL, NULL, NULL);
                         omp.pid = pids[j];
                         om.type = BOMBER_DIE;
                         send_message(fd[j][1], &om);
                         print_output(NULL, &omp, NULL, NULL);
+                        bombers[j].setIsKilled(true);
                         Bomber::dieLog++;
                     }
-                    else{
+                    else if(bombers[j].getIsAlive() && !bombers[j].getIsKilled()){
                         if (Bomber::aliveCount == 1) {
-                            winner_im = im;
-                            winner_imp.pid = pids[j];
-                            winner_imp.m = &winner_im;
-                            if(Bomber::dieLog == bombers.size()-1){
-                                print_output(&imp, NULL, NULL, NULL);
-                                omp.pid = pids[j];
-                                om.type = BOMBER_WIN;
-                                send_message(fd[j][1], &om);
-                                print_output(NULL, &omp, NULL, NULL);
-                                end = true;
-                                break;
-                            }
-                            else{
-                                winner = j;
-                                continue;
-                            }
+                            print_output(&imp, NULL, NULL, NULL);
+                            omp.pid = pids[j];
+                            om.type = BOMBER_WIN;
+                            send_message(fd[j][1], &om);
+                            print_output(NULL, &omp, NULL, NULL);
+                            bombers[j].setIsAlive(false);
+                            bombers[j].setIsKilled(true);
+                            Bomber::dieLog++;
                         }
                         else if (im.type == BOMBER_START) {
                             print_output(&imp, NULL, NULL, NULL);
@@ -240,15 +227,8 @@ void poll(std::vector<Bomber>& bombers, std::vector<Obstacle>& obstacles, std::v
                 }
             }
         }
-        if(!end && Bomber::dieLog == bombers.size()-1){
-            print_output(&winner_imp, NULL, NULL, NULL);
-            omp.pid = pids[winner];
-            om.type = BOMBER_WIN;
-            send_message(fd[winner][1], &om);
-            print_output(NULL, &omp, NULL, NULL);
-            end = true;
-        }
-        sleep(1);
+        //sleep 1ms
+        usleep(1000);
     }
     for (int i = 0; i < bombs.size(); i++) {
         if (bombs[i].getIsLive()){

@@ -9,7 +9,7 @@ Parser::Parser() {
     for (int i = 0; i < obstacleCount; i++) {
         int x, y, durability;
         std::cin >> x >> y >> durability;
-        obstacles.push_back(Obstacle(x, y, durability));
+        obstacles.push_back(Obstacle(x, y, durability, map));
     }
     this->obstacles = obstacles;
 

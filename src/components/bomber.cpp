@@ -9,6 +9,7 @@ Bomber::Bomber(int x, int y, int argumentCount, char** arguments) {
     this->argumentCount = argumentCount;
     this->args = arguments;
     this->isAlive = true;
+    this->isKilled = false;
     aliveCount++;
 }
 
@@ -39,6 +40,15 @@ void Bomber::setIsAlive(bool isAlive) {
 
 bool Bomber::getIsAlive() {
     return this->isAlive;
+}
+
+
+void Bomber::setIsKilled(bool isKilled) {
+    this->isKilled = isKilled;
+}
+
+bool Bomber::getIsKilled() {
+    return this->isKilled;
 }
 
 void Bomber::Start(int socket, Map& map, omp* omp) {

@@ -25,6 +25,8 @@ public:
     char** getArgs();
     void setIsAlive(bool isAlive);
     bool getIsAlive();
+    void setIsKilled(bool isKilled);
+    bool getIsKilled();
     void Print();
     static int aliveCount;
     static int dieLog;
@@ -40,6 +42,7 @@ private:
     int argumentCount;
     char** args;
     bool isAlive;
+    bool isKilled;
 };
 
 
