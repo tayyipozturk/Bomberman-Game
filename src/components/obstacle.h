@@ -2,10 +2,11 @@
 #define OBSTACLE_H
 
 #include <iostream>
+#include "map.h"
 
 class Obstacle {
 public:
-    Obstacle(int x, int y, int durability);
+    Obstacle(int x, int y, int durability, Map& map);
     int getX();
     int getY();
     int getDurability();

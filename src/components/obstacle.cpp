@@ -1,9 +1,10 @@
 #include "obstacle.h"
 
-Obstacle::Obstacle(int x, int y, int durability) {
+Obstacle::Obstacle(int x, int y, int durability, Map& map) {
     this->x = x;
     this->y = y;
     this->durability = durability;
+    map.setObstacle(x, y);
 }
 
 int Obstacle::getX() {
