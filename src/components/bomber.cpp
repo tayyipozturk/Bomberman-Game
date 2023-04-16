@@ -79,6 +79,14 @@ std::vector<od> Bomber::getVision(Map &map) {
     bool up, down, left, right;                                     // flags to check if a way is blocked by an obstacle
     up = down = left = right = true;
 
+    if (map.getOccupancy(this->x, this->y) == BOMBER_AND_BOMB){
+        od object;
+        object.position.x = this->x;
+        object.position.y = this->y;
+        object.type = BOMB;
+        vision.push_back(object);
+    }
+
     for (int i = 1; i <= 3; i++) {
         if (up && this->y - i >= 0) {
             od object;
